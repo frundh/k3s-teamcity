@@ -1,0 +1,104 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: deployment-tc-agent
+  labels:
+    component: tc-agent
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+        maxUnavailable: 1
+        maxSurge: 1
+  selector:
+    matchLabels:
+      app: tc-agent
+  template:
+    metadata:
+      labels:
+        app: tc-agent
+    spec:
+      containers:
+      - name: tc-agent
+        image: frundh/tc-agent:latest
+        volumeMounts:
+        - mountPath: /var/run/docker.sock
+          name: docker-sock-volume
+        - mountPath: /teamcity
+          name: teamcity-volume
+        env:
+        - name: WORK_DIR
+          value: /teamcity/$$HOSTNAME/work
+        - name: SERVER_URL
+          value: "https://teamcity.frundh.local"
+        - name: AGENT_NAME
+          value: $$HOSTNAME
+          
+      volumes:
+      - name: docker-sock-volume
+        hostPath:
+          # location on host
+          path: /var/run/docker.sock
+      - name: teamcity-volume
+        hostPath:
+          # location on host
+          path: /teamcity
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: cronjob-docker-prune
+spec:
+  # every 1 hour, at minute 0
+  schedule: "0 * * * *" 
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: docker-cli
+            image: docker:dind
+            volumeMounts:
+            - mountPath: /var/run/docker.sock
+              name: docker-sock-volume
+            command:
+            - /bin/sh       
+            args:
+            - -c
+            - docker system prune --force
+          volumes:
+          - name: docker-sock-volume
+            hostPath:
+              # location on host
+              path: /var/run/docker.sock
+          restartPolicy: OnFailure
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: cronjob-tc-prune
+spec:
+  # at 03:00AM
+  schedule: "0 3 * * *" 
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: ubuntu
+            image: ubuntu
+            volumeMounts:
+            - mountPath: /teamcity
+              name: teamcity-volume
+            command:
+            - bash   
+            args:
+            - -c
+            - find /teamcity/*/work/ -name directory.map -type f -mtime +10 -exec sh -c 'rm -r $(dirname $1)' sh {} ';'
+          volumes:
+          - name: teamcity-volume
+            hostPath:
+              # location on host
+              path: /teamcity
+          restartPolicy: OnFailure

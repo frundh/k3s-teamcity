@@ -1,0 +1,17 @@
+kind: pipeline
+name: drone-poc
+
+steps:
+- name: version  
+  image: alpine/git
+  commands:
+  - if [ $(git rev-parse --abbrev-ref HEAD) = $${RELEASE_BRANCH=master} ]; then echo "$(cat VERSION),latest" > .tags; else "$(cat VERSION)-$(git log -1 --pretty=%h)" > .tags; fi
+
+- name: docker  
+  image: plugins/docker
+  settings:
+    username: ${DRONE_DOCKER_REGISTRY_USERNAME=username}
+    password: ${DRONE_DOCKER_REGISTRY_PASSWORD=password}
+    repo: frundh/hello-drone
+    tags: .tags
+    dry_run: true
