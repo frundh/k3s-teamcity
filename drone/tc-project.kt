@@ -11,6 +11,7 @@ object Drone_PoC : BuildType({
             scriptContent = """
                 cat >> .env <<EOL
                 RELEASE_BRANCH=master
+                DRONE_COMMIT_SHA=%build.vcs.number%
                 DRONE_DOCKER_REGISTRY_USERNAME=%Docker.Registry.Username%
                 DRONE_DOCKER_REGISTRY_PASSWORD=%Docker.Registry.Password%
                 EOL
