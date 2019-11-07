@@ -5,7 +5,7 @@ steps:
 - name: version  
   image: alpine/git
   commands:
-  - if [ $(git rev-parse --abbrev-ref HEAD) = $${RELEASE_BRANCH=master} ]; then echo "$(cat VERSION),latest" > .tags; else "$(cat VERSION)-$(git log -1 --pretty=%h)" > .tags; fi
+  - if [ $(git rev-parse --abbrev-ref HEAD) = $${RELEASE_BRANCH=master} ]; then echo "$(cat VERSION),latest" > .tags; else echo "$(cat VERSION)-$(git log -1 --pretty=%h)" > .tags; fi
 
 - name: docker  
   image: plugins/docker
